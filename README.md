@@ -144,4 +144,4 @@ VerityRAG/
 
 ## License
 
-MIT — see `LICENSE`.
+All rights reserved.
