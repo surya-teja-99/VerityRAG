@@ -1,4 +1,4 @@
-.PHONY: setup test demo eval clean
+.PHONY: setup test demo smoke eval clean
 
 setup:
 	pip3 install --break-system-packages torch==2.14.1+cpu --index-url https://download.pytorch.org/whl/cpu
@@ -10,6 +10,9 @@ test:
 
 demo:
 	python3 scripts/demo.py
+
+smoke:
+	python3 scripts/demo.py --sample-only
 
 eval:
 	python3 -m verityrag.eval --n_retrieval 500 --n_full 50

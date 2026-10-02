@@ -7,6 +7,7 @@ The 2 showcased Q&A are the first 2 of the 10 full-pipeline questions.
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -41,6 +42,14 @@ def show_qa(agent: VerityAgent, question: dict) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="VerityRAG demo")
+    parser.add_argument(
+        "--sample-only",
+        action="store_true",
+        help="answer the 2 sample questions only (quick smoke run, skips the eval)",
+    )
+    args = parser.parse_args()
+
     t0 = time.time()
     print("=== VerityRAG demo ===\n")
     if not CORPUS_PATH.exists() or not QUESTIONS_PATH.exists():
@@ -58,6 +67,10 @@ def main() -> None:
     print("--- Sample Q&A (with verifier) ---")
     for q in full_qs[:2]:
         show_qa(agent, q)
+
+    if args.sample_only:
+        print(f"\nSample-only run finished in {(time.time() - t0) / 60:.1f} minutes")
+        return
 
     print("\n--- Retrieval ablations: 100 questions (no generation) ---")
     ret_qs = sample_questions(questions, 100)
