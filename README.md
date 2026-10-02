@@ -1,6 +1,5 @@
 # VerityRAG
 
-![CI](https://github.com/GUNNAMSURYATEJA/VerityRAG/actions/workflows/ci.yml/badge.svg)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
 ![CPU-only](https://img.shields.io/badge/inference-CPU--only-lightgrey.svg)
 
