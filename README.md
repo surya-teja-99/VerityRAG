@@ -1,5 +1,9 @@
 # VerityRAG
 
+![CI](https://github.com/GUNNAMSURYATEJA/VerityRAG/actions/workflows/ci.yml/badge.svg)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
+![CPU-only](https://img.shields.io/badge/inference-CPU--only-lightgrey.svg)
+
 An **agentic retrieval-augmented generation (RAG)** pipeline with a **verifier agent**,
 evaluated honestly on the SQuAD v1.1 dev set. It retrieves with hybrid search
 (BM25 + dense embeddings fused by Reciprocal Rank Fusion), reranks with a
