@@ -53,6 +53,10 @@ make eval    # larger eval: 500 retrieval + 50 full-agent questions (slower)
 
 `make demo` saves machine-readable results to `results/demo_results.json`.
 
+To use the package from anywhere (rather than from this directory), install
+it in editable mode after installing torch from the CPU index first:
+`pip install -e .` (see `pyproject.toml`).
+
 ## Results
 
 Measured with `make demo` on 2026-10-02 on this machine (CPU-only, 2 threads):

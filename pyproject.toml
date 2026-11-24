@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "verityrag"
+version = "0.1.0"
+description = "Agentic retrieval-augmented generation (RAG) pipeline with a verifier agent, evaluated on SQuAD v1.1"
+readme = "README.md"
+requires-python = ">=3.12"
+# Dependencies mirror requirements.txt (pinned 2026-10-02). torch is
+# deliberately NOT listed here: the CPU wheel must come from the PyTorch
+# CPU index first, otherwise pip pulls the giant CUDA wheel:
+#   pip install torch==2.14.1+cpu --index-url https://download.pytorch.org/whl/cpu
+dependencies = [
+    "sentence-transformers==6.1.0",
+    "transformers==5.18.0",
+    "rank-bm25==0.2.2",
+    "numpy==1.26.4",
+    "huggingface-hub==1.33.0",
+    "tokenizers==0.23.2",
+    "safetensors==0.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+]
+
+[tool.setuptools]
+packages = ["verityrag"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
