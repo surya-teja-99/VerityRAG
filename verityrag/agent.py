@@ -6,7 +6,11 @@ Pipeline:
   2. Retrieve per sub-question with hybrid search and merge the results.
   3. Rerank to the top-5 passages.
   4. Synthesize an answer with [n] citations via the LLM backend.
-  5. Verify: score every answer sentence against its cited passages with the
+  5. Auto-cite: the small local generator almost never emits [n] citations
+     on its own, so uncited sentences are scored against the retrieved
+     passages and given the best-supported citation when one clears the
+     verifier threshold; sentences no passage supports stay uncited.
+  6. Verify: score every answer sentence against its cited passages with the
      cross-encoder. Sentences below the threshold (or with no citation) are
      flagged; heavily-flagged answers are marked LOW CONFIDENCE.
 """
@@ -124,6 +128,53 @@ class VerityAgent:
         )
 
     # -- verification ---------------------------------------------------
+    def _default_score_fn(self):
+        def score_fn(sent: str, ptext: str) -> float:
+            # (reranker.score truncates long inputs for CPU speed;
+            # see CrossEncoderReranker.)
+            logit = self.reranker.score(sent, [ptext])[0]
+            return 1.0 / (1.0 + math.exp(-logit))
+
+        return score_fn
+
+    def assign_citations(
+        self,
+        answer: str,
+        passages: list[dict],
+        score_fn=None,
+    ) -> str:
+        """Attach a citation to uncited sentences the passages support.
+
+        For each sentence with no citation (and no out-of-range citation),
+        score it against every retrieved passage with ``score_fn`` and append
+        ``[n]`` for the best-scoring passage when that score clears
+        ``self.threshold``. Sentences already cited, or that no passage
+        supports, are left unchanged — auto-citation never invents support,
+        it only recovers the citation the generator failed to emit.
+        """
+        if score_fn is None:
+            score_fn = self._default_score_fn()
+        if not passages or not answer.strip():
+            return answer
+        out: list[str] = []
+        for sent in split_sentences(answer):
+            cites, bad = extract_citations(sent, len(passages))
+            if bad or cites:
+                out.append(sent)
+                continue
+            best_score, best_idx = max(
+                ((score_fn(sent, p["text"]), i) for i, p in enumerate(passages)),
+                key=lambda t: t[0],
+            )
+            if best_score >= self.threshold:
+                m = re.search(r"([.!?])\s*$", sent)
+                if m:
+                    sent = sent[: m.start()] + f" [{best_idx + 1}]" + m.group(1)
+                else:
+                    sent = sent + f" [{best_idx + 1}]"
+            out.append(sent)
+        return " ".join(out)
+
     def verify(
         self,
         answer: str,
@@ -137,11 +188,7 @@ class VerityAgent:
         overall verdict).
         """
         if score_fn is None:
-            def score_fn(sent: str, ptext: str) -> float:
-                # (reranker.score truncates long inputs for CPU speed;
-                # see CrossEncoderReranker.)
-                logit = self.reranker.score(sent, [ptext])[0]
-                return 1.0 / (1.0 + math.exp(-logit))
+            score_fn = self._default_score_fn()
 
         verdicts: list[SentenceVerdict] = []
         for sent in split_sentences(answer):
@@ -181,6 +228,7 @@ class VerityAgent:
                                time.time() - t0, n_sub)
         prompt = self._build_prompt(question, passages)
         raw = self.llm.generate(prompt, max_new_tokens=64)
+        raw = self.assign_citations(raw, passages)
         sentences, verdict = self.verify(raw, passages)
         return AgentResult(
             question=question,

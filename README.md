@@ -109,7 +109,11 @@ mode small generators have.
   emits `[n]` citations despite being told to, so the verifier flags nearly
   every sentence as uncited (100% LOW CONFIDENCE on the demo sample). The
   verifier is behaving correctly; a stronger generator (or the documented
-  `OpenAICompatibleBackend`) would change this picture.
+  `OpenAICompatibleBackend`) would change this picture. As a mitigation, the
+  agent now auto-cites: before verification, uncited sentences are scored
+  against the retrieved passages and given the best-supported `[n]` when one
+  clears the verifier threshold — sentences no passage supports stay uncited
+  and flagged. (Demo numbers above predate auto-citation.)
 - **Rerank inputs are truncated to 800 chars** for CPU speed (full paragraphs
   make the cross-encoder ~8x slower on this machine). Measured ranking
   agreement vs. full-text reranking is high but not perfect — a documented
