@@ -119,8 +119,9 @@ mode small generators have.
   agreement vs. full-text reranking is high but not perfect — a documented
   speed/quality trade-off.
 - **Heuristic decomposition.** Sub-question splitting is a regex over
-  conjunctions, not a learned planner. It is a no-op for single-clause
-  questions (most of SQuAD).
+  conjunctions, not a learned planner. It only splits when the next
+  fragment starts with an interrogative word, so it is a no-op for
+  single-clause questions (most of SQuAD).
 - **SQuAD-only eval.** The corpus is the SQuAD v1.1 dev paragraphs themselves,
   so the gold passage is always in the index. This measures retrieval/rerank
   quality, not open-domain generalization.

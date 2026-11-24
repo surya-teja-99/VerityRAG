@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 CITATION_RE = re.compile(r"\[(\d+)\]")
 SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
 SPLIT_RE = re.compile(r"\s+(?:and|or|but)\s+|;")
+INTERROGATIVES = ("who", "what", "when", "where", "why", "how", "which", "whose", "whom")
 
 # Sigmoid of the cross-encoder logit. Heuristic: below this, a sentence is not
 # considered supported by the passage it cites.
@@ -36,22 +37,31 @@ PASSAGE_CHARS = 500  # truncate passages in the synthesis prompt (CPU budget)
 def decompose(question: str) -> list[str]:
     """Heuristic question decomposition.
 
-    Splits on conjunctions/semicolons; each extra fragment is rebuilt as a
-    question using the original interrogative word. This is a deliberately
-    simple heuristic — it helps multi-hop-ish questions and is a no-op for
-    single-clause questions.
+    Splits on conjunctions/semicolons only when the following fragment
+    starts with an interrogative word (who/what/when/...). Without that
+    guard, splitting on any "and" mangles single questions: "Who wrote
+    Hamlet and when was it published?" used to rebuild the second fragment
+    as "Who when was it published?", and "What is the capital of France
+    and Germany?" used to become "What germany?". This is still a
+    deliberately simple heuristic — it helps multi-hop-ish questions and
+    is a no-op for single-clause questions.
     """
     q = question.strip()
-    parts = [p.strip(" ,") for p in SPLIT_RE.split(q) if p.strip(" ,")]
+    parts: list[str] = []
+    last = 0
+    for m in SPLIT_RE.finditer(q):
+        nxt = q[m.end():].lstrip()
+        first = nxt.split()[0].rstrip("?").lower() if nxt.split() else ""
+        if first in INTERROGATIVES:
+            parts.append(q[last:m.start()].strip(" ,"))
+            last = m.end()
+    parts.append(q[last:].strip(" ,"))
+    parts = [p for p in parts if p]
     if len(parts) <= 1:
         return [q]
-    first_word = q.split()[0] if q.split() else "What"
     subqs = [q]
     for part in parts[1:]:
-        frag = part.rstrip("?")
-        if not frag.lower().startswith(first_word.lower()):
-            frag = f"{first_word} {frag[0].lower() + frag[1:]}" if frag else frag
-        subqs.append(frag.rstrip("?") + "?")
+        subqs.append(part.rstrip("?") + "?")
     # Deduplicate, preserve order.
     seen, out = set(), []
     for s in subqs:
